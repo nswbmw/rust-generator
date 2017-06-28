@@ -41,7 +41,7 @@ if (fs.existsSync(dirPath)) {
 }
 const configFilepath = path.join(__dirname, '..', 'template', 'default.js');
 const cargoFilepath = path.join(__dirname, '..', 'template', 'Cargo.toml');
-const gitignoreFilepath = path.join(__dirname, '..', 'template', '.gitignore');
+const gitignoreFilepath = path.join(__dirname, '..', 'template', 'gitignore');
 const mainFilepath = path.join(__dirname, '..', 'template', 'main.rs');
 const ctx = { filename };
 

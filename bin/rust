@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const chalk = require('chalk');
+const fse = require('fs-extra');
+const promzard = require('promzard');
+const program = require('commander');
+
+const pkg = require('../package.json');
+ 
+program
+  .version(pkg.version)
+  .usage('[option] [dir]')
+  .description(pkg.description)
+  .option('-s, --source <path>', 'source codes directory, default: src')
+  .option('-e, --entry <path>', 'entry file, default: main.rs')
+  .parse(process.argv);
+
+program.on('--help', () => {
+  console.log('  Example:');
+  console.log('');
+  console.log('    $ rust rust-demo');
+  console.log('');
+});
+
+if (!program.args.length) {
+  program.help();
+}
+
+const sourceDir = program.source || 'src';
+const entryFile = program.entry || 'main.rs';
+const dirPath = program.args[0];
+const filename = path.basename(dirPath);
+const absoluteDirPath = path.join(process.cwd(), dirPath);
+if (fs.existsSync(dirPath)) {
+  console.error(`${absoluteDirPath} already exists! please change a name.`);
+  return;
+}
+const configFilepath = path.join(__dirname, '..', 'template', 'default.js');
+const cargoFilepath = path.join(__dirname, '..', 'template', 'Cargo.toml');
+const gitignoreFilepath = path.join(__dirname, '..', 'template', '.gitignore');
+const mainFilepath = path.join(__dirname, '..', 'template', 'main.rs');
+const ctx = { filename };
+
+promzard(configFilepath, ctx, (err, config) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+  let defaultCargoConfig = fs.readFileSync(cargoFilepath, { encoding: 'utf8' });
+  defaultCargoConfig = defaultCargoConfig
+    .replace('{name}', JSON.stringify(config.name))
+    .replace('{version}', JSON.stringify(config.version))
+    .replace('{description}', JSON.stringify(config.description))
+    .replace('{keywords}', JSON.stringify(config.keywords).replace(/(\s+|\s*,\s*)/g, ', '))
+    .replace('{authors}', JSON.stringify(config.authors).replace(/(\s+|\s*,\s*)/g, ', '))
+    .replace('{repository}', JSON.stringify(config.repository))
+    .replace('{license}', JSON.stringify(config.license));
+  console.log(chalk.cyan('\nGenerated Cargo.toml:\n'));
+  console.log(defaultCargoConfig);
+
+  try {
+    fse.ensureDirSync(absoluteDirPath);
+    fse.ensureDirSync(path.join(absoluteDirPath, sourceDir));
+    fse.copy(gitignoreFilepath, path.join(absoluteDirPath, '.gitignore'));
+    fse.copy(mainFilepath, path.join(absoluteDirPath, sourceDir, entryFile));
+    fs.writeFileSync(path.join(absoluteDirPath, 'Cargo.toml'), defaultCargoConfig);
+
+    console.log(chalk.cyan('   create: ') + `${filename}`);
+    console.log(chalk.cyan('   create: ') + `${filename}/${sourceDir}/${entryFile}`);
+    console.log(chalk.cyan('   create: ') + `${filename}/Cargo.toml`);
+    console.log(chalk.cyan('   create: ') + `${filename}/.gitignore`);
+    console.log();
+    console.log('   install dependencies:');
+    console.log(`     $ cd ${filename} && cargo add serde serde_json serde_derive`);
+    console.log();
+    console.log('   run the app:');
+    console.log('     $ cargo run');
+    console.log();
+  } catch (e) {
+    console.error(e);
+    fse.removeSync(absoluteDirPath);
+  }
+});

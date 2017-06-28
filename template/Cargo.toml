@@ -1,0 +1,10 @@
+[package]
+name = {name}
+version = {version}
+description = {description}
+keywords = [{keywords}]
+authors = [{authors}]
+repository = {repository}
+license = {license}
+
+[dependencies]
